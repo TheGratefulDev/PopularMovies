@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PopularMovies</string>
+    <string name="error_getting_movies">Error Getting Movies</string>
 </resources>
