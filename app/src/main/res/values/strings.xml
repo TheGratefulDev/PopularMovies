@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">PopularMovies</string>
     <string name="error_getting_movies">Error Getting Movies</string>
+    <string name="menu_sort_by_popular">Popular</string>
+    <string name="menu_sort_by_highest_rated">Highest Rated</string>
+    <string name="most_voted">Most Voted</string>
 </resources>
