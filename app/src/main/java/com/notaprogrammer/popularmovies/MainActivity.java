@@ -56,9 +56,9 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-
         OkHttpClient client = new OkHttpClient();
 
+        //TODO CLEAN UP
         HttpUrl url = new HttpUrl.Builder()
                 .scheme("https")
                 .host("api.themoviedb.org")
@@ -73,14 +73,14 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                 .build();
 
 
-        progressBar.setVisibility(View.VISIBLE);
+        displayProgressBar(true);
         client.newCall(request)
                 .enqueue(new Callback() {
 
                     @Override
                     public void onFailure(@NonNull Call call, IOException e) {
-                        e.printStackTrace();
-                        progressBar.setVisibility(View.GONE);
+                        displayProgressBar(false);
+                        displayErrorMessage();
                     }
 
                     @Override
@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
 
                                     setMovieList(finalMovieList);
 
-                                    progressBar.setVisibility(View.GONE);
+                                    displayProgressBar(false);
 
                                     moviesAdapter = new MoviesAdapter(finalMovieList, MainActivity.this);
                                     moviesRv.setAdapter(moviesAdapter);
@@ -127,7 +127,16 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
 
 
                         } else {
-                            throw new IOException("Unexpected code " + response);
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    displayProgressBar(false);
+
+                                    displayErrorMessage();
+                                }
+                            });
+
                         }
                     }
                 });
@@ -169,14 +178,21 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         return super.onOptionsItemSelected(item);
     }
 
+    private void displayProgressBar(boolean visible){
+        if(visible){
+            progressBar.setVisibility(View.VISIBLE);
+        }else{
+            progressBar.setVisibility(View.GONE);
+        }
 
+    }
 
     private void displayErrorMessage(){
          emptyViewTv.setVisibility(View.VISIBLE);
     }
 
     @Override
-    public void onListItemClick(int clickedItemIndex) {
-
+    public void onListItemClick(Movie selectedMovie) {
+        Toast.makeText(this, selectedMovie.getOriginalTitle(), Toast.LENGTH_SHORT).show();
     }
 }

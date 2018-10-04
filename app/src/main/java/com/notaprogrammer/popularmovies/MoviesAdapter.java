@@ -21,7 +21,7 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
 
 
     public interface ItemClickListener {
-        void onListItemClick(int clickedItemIndex);
+        void onListItemClick(Movie selectedMovie);
     }
 
     MoviesAdapter(List<Movie> movieList, ItemClickListener listener){
@@ -65,13 +65,16 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         }
 
         void bind(Movie movie) {
+            //TODO CLEAN UP
             Picasso.get().load("https://image.tmdb.org/t/p/w185//"+movie.getPosterPath()).into(movieImageView);
         }
 
         @Override
         public void onClick(View v) {
             int clickedPosition = getAdapterPosition();
-            mOnClickListener.onListItemClick(clickedPosition);
+
+            Movie selectedMovie = movieList.get(clickedPosition);
+            mOnClickListener.onListItemClick(selectedMovie);
         }
     }
 
