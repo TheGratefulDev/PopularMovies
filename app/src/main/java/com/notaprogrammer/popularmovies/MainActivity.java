@@ -3,18 +3,19 @@ package com.notaprogrammer.popularmovies;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 
 import org.json.JSONArray;
@@ -35,20 +36,30 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-public class MainActivity extends AppCompatActivity implements MoviesAdapter.ItemClickListener{
+public class MainActivity extends AppCompatActivity implements MoviesAdapter.ItemClickListener, SwipeRefreshLayout.OnRefreshListener {
 
+    private final List<Movie> movieList;
+    private MoviesAdapter moviesAdapter;
+    private Menu menu;
+    private String selectedSortType;
+    private String selectedActionBarTitle;
+
+    //Can not be private
+    @SuppressWarnings("WeakerAccess")
     @BindView(R.id.tv_error_message)
-    TextView emptyViewTv;
+    protected TextView emptyViewTv;
 
+    @SuppressWarnings("WeakerAccess")
     @BindView(R.id.rv_movie_choices)
-    RecyclerView moviesRv;
+    protected RecyclerView moviesRv;
 
-    @BindView(R.id.pg_loading)
-    ProgressBar progressBar;
+    @SuppressWarnings("WeakerAccess")
+    @BindView(R.id.spl_movie_choices)
+    protected SwipeRefreshLayout swipeRefreshLayout;
 
-    MoviesAdapter moviesAdapter;
-
-    List<Movie> movieList = new ArrayList<>();
+    public MainActivity() {
+        movieList = new ArrayList<>();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,17 +67,23 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-
         moviesAdapter = new MoviesAdapter(movieList, MainActivity.this);
         moviesRv.setAdapter(moviesAdapter);
         moviesRv.setLayoutManager( new GridLayoutManager(getApplicationContext(), 2) );
         moviesRv.setHasFixedSize(true);
 
-        getMoviesFromApi(NetworkUtils.SORT_BY_POPULAR);
+        swipeRefreshLayout.setOnRefreshListener(this);
+        swipeRefreshLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                getMoviesFromApi();
+            }
+        });
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        this.menu = menu;
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
@@ -77,15 +94,15 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
 
         switch (itemThatWasClickedId){
             case R.id.action_sort_by_popular:
-                getMoviesFromApi(NetworkUtils.SORT_BY_POPULAR);
+                refreshScreen(item, NetworkUtils.SORT_BY_POPULAR);
                 break;
 
             case R.id.action_sort_by_top_rated:
-                getMoviesFromApi(NetworkUtils.SORT_BY_TOP_RATED);
+                refreshScreen(item, NetworkUtils.SORT_BY_TOP_RATED);
                 break;
 
-            case R.id.action_sort_by_upcoming:
-                getMoviesFromApi(NetworkUtils.SORT_BY_UPCOMING);
+            case R.id.action_sort_by_now_playing:
+                refreshScreen(item, NetworkUtils.SORT_BY_NOW_PLAYING);
                 break;
 
             default:
@@ -94,26 +111,29 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         return super.onOptionsItemSelected(item);
     }
 
-    private void displayProgressBar(boolean visible){
-        if(visible){
-            progressBar.setVisibility(View.VISIBLE);
-        }else{
-            progressBar.setVisibility(View.GONE);
-        }
-
+    private void refreshScreen(MenuItem item, String sortType){
+        setSelectedActionBarTitle(item.getTitle().toString());
+        setSelectedSortType(sortType);
+        onRefresh();
     }
 
     private void displayErrorMessage(){
          emptyViewTv.setVisibility(View.VISIBLE);
     }
 
-    private void getMoviesFromApi(String sortBy){
+    private void getMoviesFromApi(){
 
-        displayProgressBar(true);
+        if(swipeRefreshLayout != null){
+            swipeRefreshLayout.setRefreshing(true);
+        }
+
+        if(getSupportActionBar()!=null){
+            getSupportActionBar().setTitle(getSelectedActionBarTitle());
+        }
 
         OkHttpClient client = new OkHttpClient();
 
-        HttpUrl url = NetworkUtils.buildUrlWithSortType(sortBy);
+        HttpUrl url = NetworkUtils.buildUrlWithSortType(getSelectedSortType());
 
         Request request = new Request.Builder().url(url).build();
 
@@ -124,8 +144,12 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        displayProgressBar(false);
                         displayErrorMessage();
+
+                        if(swipeRefreshLayout != null){
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+
                     }
                 });
 
@@ -154,7 +178,12 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                         @Override
                         public void run() {
                             moviesAdapter.updateList(finalMovieList);
-                            displayProgressBar(false);
+                            //scroll back to the top if user is at the bottom of the screen after sort changes
+                            moviesRv.smoothScrollToPosition(0);
+                            if(swipeRefreshLayout != null){
+                                swipeRefreshLayout.setRefreshing(false);
+                            }
+
                         }
                     });
 
@@ -163,8 +192,11 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            displayProgressBar(false);
                             displayErrorMessage();
+
+                            if(swipeRefreshLayout != null){
+                                swipeRefreshLayout.setRefreshing(false);
+                            }
                         }
                     });
 
@@ -180,8 +212,34 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         Intent intent = new Intent(MainActivity.this, DetailActivity.class);
         intent.putExtra(DetailActivity.SELECTED_MOVIE, movieJson);
         startActivity(intent);
+    }
 
+    private String getSelectedActionBarTitle() {
 
-        Toast.makeText(this, selectedMovie.getOriginalTitle(), Toast.LENGTH_SHORT).show();
+        if(TextUtils.isEmpty(selectedActionBarTitle)){
+            return selectedActionBarTitle = menu.findItem(R.id.action_sort_by_popular).getTitle().toString();
+        }
+
+        return selectedActionBarTitle;
+    }
+
+    private void setSelectedActionBarTitle(String selectedActionBarTitle) {
+        this.selectedActionBarTitle = selectedActionBarTitle;
+    }
+
+    private void setSelectedSortType(String selectedSortType) {
+        this.selectedSortType = selectedSortType;
+    }
+
+    private String getSelectedSortType() {
+        if(TextUtils.isEmpty(selectedSortType)){
+            return selectedSortType = NetworkUtils.SORT_BY_POPULAR;
+        }
+        return selectedSortType;
+    }
+
+    @Override
+    public void onRefresh() {
+        getMoviesFromApi();
     }
 }

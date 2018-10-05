@@ -25,7 +25,8 @@
                 android:adjustViewBounds="true"
                 android:id="@+id/image_details_poster"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                tools:ignore="ContentDescription" />
 
             <LinearLayout
                 android:orientation="vertical"

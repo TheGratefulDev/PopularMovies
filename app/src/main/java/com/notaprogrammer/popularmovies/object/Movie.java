@@ -1,7 +1,8 @@
-package com.notaprogrammer.popularmovies;
+package com.notaprogrammer.popularmovies.object;
 
 import com.google.gson.annotations.SerializedName;
 
+@SuppressWarnings("unused")
 public class Movie {
 
     @SerializedName("id") long id;

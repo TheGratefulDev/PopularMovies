@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 import com.squareup.picasso.Picasso;
 
@@ -17,7 +18,7 @@ import okhttp3.HttpUrl;
 
 public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewHolder> {
 
-    final private ItemClickListener mOnClickListener;
+    final private ItemClickListener onListItemClick;
     private List<Movie> movieList;
 
     public interface ItemClickListener {
@@ -26,7 +27,7 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
 
     MoviesAdapter(List<Movie> movieList, ItemClickListener listener){
         this.movieList = movieList;
-        this.mOnClickListener = listener;
+        this.onListItemClick = listener;
     }
 
     @NonNull
@@ -44,7 +45,6 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
 
     @Override
     public void onBindViewHolder(@NonNull MovieViewHolder movieViewHolder, int position) {
-
         Movie movie = movieList.get(position);
         movieViewHolder.bind(movie);
     }
@@ -56,7 +56,7 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
 
     class MovieViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
-        ImageView movieImageView;
+        final ImageView movieImageView;
 
         MovieViewHolder(View itemView) {
             super(itemView);
@@ -65,16 +65,16 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         }
 
         void bind(Movie movie) {
-            HttpUrl httpUrl = NetworkUtils.buildImageUrl(movie.getPosterPath());
-            Picasso.get().load(httpUrl.toString()).into(movieImageView);
+            HttpUrl httpUrl = NetworkUtils.buildImageUrl( NetworkUtils.IMAGE_SIZE_W185, movie.getPosterPath() );
+            Picasso.get().load(httpUrl.toString()).error(R.drawable.movie_user_placeholder).into(movieImageView);
+            movieImageView.setContentDescription(R.string.poster_content_description_image_prefix + movie.getOriginalTitle());
         }
 
         @Override
         public void onClick(View v) {
             int clickedPosition = getAdapterPosition();
-
             Movie selectedMovie = movieList.get(clickedPosition);
-            mOnClickListener.onListItemClick(selectedMovie);
+            onListItemClick.onListItemClick(selectedMovie);
         }
     }
 

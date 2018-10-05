@@ -15,9 +15,9 @@
         android:title="@string/menu_sort_by_top_rated"/>
 
     <item
-        android:id="@+id/action_sort_by_upcoming"
+        android:id="@+id/action_sort_by_now_playing"
         android:orderInCategory="3"
         app:showAsAction="never"
-        android:title="@string/menu_sort_by_upcoming"/>
+        android:title="@string/menu_sort_by_now_playing"/>
 
 </menu>
