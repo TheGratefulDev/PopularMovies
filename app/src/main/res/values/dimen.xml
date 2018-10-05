@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="label">18sp</dimen>
+    <dimen name="info">16sp</dimen>
+    <dimen name="detail_padding_top">10dp</dimen>
+    <dimen name="small_padding">5dp</dimen>
+</resources>

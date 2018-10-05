@@ -8,17 +8,17 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 import com.squareup.picasso.Picasso;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+
+import okhttp3.HttpUrl;
 
 public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewHolder> {
 
     final private ItemClickListener mOnClickListener;
-    final private List<Movie> movieList;
-
+    private List<Movie> movieList;
 
     public interface ItemClickListener {
         void onListItemClick(Movie selectedMovie);
@@ -65,8 +65,8 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         }
 
         void bind(Movie movie) {
-            //TODO CLEAN UP
-            Picasso.get().load("https://image.tmdb.org/t/p/w185//"+movie.getPosterPath()).into(movieImageView);
+            HttpUrl httpUrl = NetworkUtils.buildImageUrl(movie.getPosterPath());
+            Picasso.get().load(httpUrl.toString()).into(movieImageView);
         }
 
         @Override
@@ -78,39 +78,9 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         }
     }
 
-    void orderByPopular() {
-        Collections.sort(movieList, new Comparator<Movie>() {
-            @Override
-            public int compare(Movie o1, Movie o2) {
-                return Double.compare(o2.getPopularity(), o1.getPopularity());
-
-            }
-        });
-
+    void updateList(List<Movie> newMovieList){
+        this.movieList = newMovieList;
         notifyDataSetChanged();
     }
-
-    void orderByHighestRated() {
-        Collections.sort(movieList, new Comparator<Movie>() {
-            @Override
-            public int compare(Movie o1, Movie o2) {
-                return Double.compare(o2.getVoteAverage(), o1.getVoteAverage());
-            }
-        });
-
-        notifyDataSetChanged();
-    }
-
-    void orderByMostVoted() {
-        Collections.sort(movieList, new Comparator<Movie>() {
-            @Override
-            public int compare(Movie o1, Movie o2) {
-                return Double.compare(o2.getVoteCount(), o1.getVoteCount());
-            }
-        });
-
-        notifyDataSetChanged();
-    }
-
 
 }

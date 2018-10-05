@@ -2,6 +2,11 @@
     <string name="app_name">PopularMovies</string>
     <string name="error_getting_movies">Error Getting Movies</string>
     <string name="menu_sort_by_popular">Popular</string>
-    <string name="menu_sort_by_highest_rated">Highest Rated</string>
-    <string name="most_voted">Most Voted</string>
+    <string name="menu_sort_by_top_rated">Top Rated</string>
+    <string name="menu_sort_by_upcoming">Upcoming</string>
+    <string name="error_problem_loading_detail">problem loading the detail</string>
+    <string name="overview">Overview</string>
+    <string name="release_date">Release Date</string>
+    <string name="rate">Rate</string>
+
 </resources>

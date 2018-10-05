@@ -1,12 +1,11 @@
 package com.notaprogrammer.popularmovies;
 
-import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -16,6 +15,7 @@ import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -56,96 +56,13 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        OkHttpClient client = new OkHttpClient();
 
-        //TODO CLEAN UP
-        HttpUrl url = new HttpUrl.Builder()
-                .scheme("https")
-                .host("api.themoviedb.org")
-                .addPathSegment("3")
-                .addPathSegment("movie")
-                .addPathSegment("popular")
-                .addQueryParameter("api_key", BuildConfig.TheMovieDBAPIKey)
-                .build();
-        Log.d("TAG", url.toString() + "");
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
+        moviesAdapter = new MoviesAdapter(movieList, MainActivity.this);
+        moviesRv.setAdapter(moviesAdapter);
+        moviesRv.setLayoutManager( new GridLayoutManager(getApplicationContext(), 2) );
+        moviesRv.setHasFixedSize(true);
 
-
-        displayProgressBar(true);
-        client.newCall(request)
-                .enqueue(new Callback() {
-
-                    @Override
-                    public void onFailure(@NonNull Call call, IOException e) {
-                        displayProgressBar(false);
-                        displayErrorMessage();
-                    }
-
-                    @Override
-                    public void onResponse( @NonNull Call call, @NonNull final Response response) throws IOException {
-
-                        if (response.isSuccessful() && response.body() !=null) {
-                            List<Movie> movieList = new ArrayList<>();
-                            Gson gson = new Gson();
-
-                            try {
-                                JSONObject jsonObject = new JSONObject(response.body().string());
-                                JSONArray moviesArray = jsonObject.getJSONArray("results");
-
-                                Type listType = new TypeToken<List<Movie>>(){}.getType();
-                                List<Movie> movies =  gson.fromJson(moviesArray.toString(), listType);
-                                movieList = movies;
-                                Log.d("TAG", "successResponse: " + movies.get(5).getOriginalTitle());
-
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-                            final List<Movie> finalMovieList = movieList;
-
-
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-
-
-                                    setMovieList(finalMovieList);
-
-                                    displayProgressBar(false);
-
-                                    moviesAdapter = new MoviesAdapter(finalMovieList, MainActivity.this);
-                                    moviesRv.setAdapter(moviesAdapter);
-
-                                    moviesRv.setLayoutManager( new GridLayoutManager(getApplicationContext(), 2) );
-                                    moviesRv.setHasFixedSize(true);
-                                    moviesAdapter.notifyDataSetChanged();
-                                }
-                            });
-
-
-
-                        } else {
-
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    displayProgressBar(false);
-
-                                    displayErrorMessage();
-                                }
-                            });
-
-                        }
-                    }
-                });
-
-
-    }
-
-    private void setMovieList(List<Movie> finalMovieList) {
-        movieList = finalMovieList;
+        getMoviesFromApi(NetworkUtils.SORT_BY_POPULAR);
     }
 
     @Override
@@ -157,19 +74,18 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int itemThatWasClickedId = item.getItemId();
-        Context context = MainActivity.this;
 
         switch (itemThatWasClickedId){
             case R.id.action_sort_by_popular:
-                moviesAdapter.orderByPopular();
+                getMoviesFromApi(NetworkUtils.SORT_BY_POPULAR);
                 break;
 
-            case R.id.action_sort_by_highest_rated:
-                moviesAdapter.orderByHighestRated();
+            case R.id.action_sort_by_top_rated:
+                getMoviesFromApi(NetworkUtils.SORT_BY_TOP_RATED);
                 break;
 
-            case R.id.action_sort_by_most_voted:
-                moviesAdapter.orderByMostVoted();
+            case R.id.action_sort_by_upcoming:
+                getMoviesFromApi(NetworkUtils.SORT_BY_UPCOMING);
                 break;
 
             default:
@@ -191,8 +107,81 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
          emptyViewTv.setVisibility(View.VISIBLE);
     }
 
+    private void getMoviesFromApi(String sortBy){
+
+        displayProgressBar(true);
+
+        OkHttpClient client = new OkHttpClient();
+
+        HttpUrl url = NetworkUtils.buildUrlWithSortType(sortBy);
+
+        Request request = new Request.Builder().url(url).build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        displayProgressBar(false);
+                        displayErrorMessage();
+                    }
+                });
+
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.body() !=null) {
+                    List<Movie> movieList = new ArrayList<>();
+                    Gson gson = new Gson();
+
+                    try {
+                        JSONObject jsonObject = new JSONObject(response.body().string());
+                        JSONArray moviesArray = jsonObject.getJSONArray(NetworkUtils.RESULT_KEY_RESULTS);
+
+                        Type listType = new TypeToken<List<Movie>>(){}.getType();
+                        movieList = gson.fromJson(moviesArray.toString(), listType);
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    final List<Movie> finalMovieList = movieList;
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            moviesAdapter.updateList(finalMovieList);
+                            displayProgressBar(false);
+                        }
+                    });
+
+                } else {
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            displayProgressBar(false);
+                            displayErrorMessage();
+                        }
+                    });
+
+                }
+            }
+        });
+    }
+
     @Override
     public void onListItemClick(Movie selectedMovie) {
+        String movieJson = new Gson().toJson(selectedMovie);
+
+        Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+        intent.putExtra(DetailActivity.SELECTED_MOVIE, movieJson);
+        startActivity(intent);
+
+
         Toast.makeText(this, selectedMovie.getOriginalTitle(), Toast.LENGTH_SHORT).show();
     }
 }

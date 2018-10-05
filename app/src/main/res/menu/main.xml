@@ -9,15 +9,15 @@
         android:title="@string/menu_sort_by_popular"/>
 
     <item
-        android:id="@+id/action_sort_by_highest_rated"
+        android:id="@+id/action_sort_by_top_rated"
         android:orderInCategory="2"
         app:showAsAction="never"
-        android:title="@string/menu_sort_by_highest_rated"/>
+        android:title="@string/menu_sort_by_top_rated"/>
 
     <item
-        android:id="@+id/action_sort_by_most_voted"
+        android:id="@+id/action_sort_by_upcoming"
         android:orderInCategory="3"
         app:showAsAction="never"
-        android:title="@string/most_voted"/>
+        android:title="@string/menu_sort_by_upcoming"/>
 
 </menu>
