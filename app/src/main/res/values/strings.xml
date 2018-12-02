@@ -9,4 +9,8 @@
     <string name="release_date">Release Date</string>
     <string name="rate">Rate</string>
     <string name="poster_content_description_image_prefix">Poster of </string>
+    <string name="videos">Videos</string>
+    <string name="review">Reviews</string>
+    <string name="errorProblem_loading_review">Problem Loading Review</string>
+    <string name="genre">Genre</string>
 </resources>

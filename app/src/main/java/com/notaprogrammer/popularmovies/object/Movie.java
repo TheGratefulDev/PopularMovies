@@ -23,6 +23,8 @@ public class Movie {
 
     @SerializedName("original_title") String originalTitle;
 
+    @SerializedName("title") String title;
+
     @SerializedName("backdrop_path") String backDropPath;
 
     @SerializedName("overview") String overView;
@@ -138,5 +140,12 @@ public class Movie {
         this.popularity = popularity;
     }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getTitle() {
+        return title;
+    }
 
 }

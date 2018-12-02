@@ -15,6 +15,7 @@ import android.widget.TextView;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.notaprogrammer.popularmovies.adapter.MoviesAdapter;
 import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 
@@ -117,11 +118,11 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         onRefresh();
     }
 
-    private void displayErrorMessage(){
+    private void displayErrorMessage() {
          emptyViewTv.setVisibility(View.VISIBLE);
     }
 
-    private void getMoviesFromApi(){
+    private void getMoviesFromApi() {
 
         if(swipeRefreshLayout != null){
             swipeRefreshLayout.setRefreshing(true);
@@ -212,6 +213,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         Intent intent = new Intent(MainActivity.this, DetailActivity.class);
         intent.putExtra(DetailActivity.SELECTED_MOVIE, movieJson);
         startActivity(intent);
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
     }
 
     private String getSelectedActionBarTitle() {

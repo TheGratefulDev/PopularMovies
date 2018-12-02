@@ -1,4 +1,4 @@
-package com.notaprogrammer.popularmovies;
+package com.notaprogrammer.popularmovies.adapter;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.notaprogrammer.popularmovies.R;
 import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 import com.squareup.picasso.Picasso;
@@ -25,7 +26,7 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         void onListItemClick(Movie selectedMovie);
     }
 
-    MoviesAdapter(List<Movie> movieList, ItemClickListener listener){
+    public MoviesAdapter(List<Movie> movieList, ItemClickListener listener){
         this.movieList = movieList;
         this.onListItemClick = listener;
     }
@@ -78,7 +79,7 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         }
     }
 
-    void updateList(List<Movie> newMovieList){
+    public void updateList(List<Movie> newMovieList){
         this.movieList = newMovieList;
         notifyDataSetChanged();
     }
