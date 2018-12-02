@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.notaprogrammer.popularmovies.R;
 import com.notaprogrammer.popularmovies.object.Movie;
@@ -58,17 +59,29 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
     class MovieViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
         final ImageView movieImageView;
+        final TextView movieTextView;
+        final ImageView favoriteIndicatorImageView;
 
         MovieViewHolder(View itemView) {
             super(itemView);
             movieImageView =  itemView.findViewById(R.id.iv_movie);
+            movieTextView = itemView.findViewById(R.id.tv_movie);
+            favoriteIndicatorImageView = itemView.findViewById(R.id.iv_favorite_indicator);
             itemView.setOnClickListener(this);
         }
 
         void bind(Movie movie) {
             HttpUrl httpUrl = NetworkUtils.buildImageUrl( NetworkUtils.IMAGE_SIZE_W185, movie.getPosterPath() );
             Picasso.get().load(httpUrl.toString()).error(R.drawable.movie_user_placeholder).into(movieImageView);
-            movieImageView.setContentDescription(R.string.poster_content_description_image_prefix + movie.getOriginalTitle());
+            movieImageView.setContentDescription(R.string.poster_content_description_image_prefix + movie.getTitle());
+            movieTextView.setText(movie.getTitle());
+
+            if(movie.isFavorite() ){
+                favoriteIndicatorImageView.setVisibility(View.VISIBLE);
+            }else{
+                favoriteIndicatorImageView.setVisibility(View.GONE);
+            }
+
         }
 
         @Override
