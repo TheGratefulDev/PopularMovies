@@ -19,11 +19,11 @@
     </android.support.v4.widget.SwipeRefreshLayout>
 
     <TextView
-        android:id="@+id/tv_error_message"
+        android:id="@+id/tv_empty_message"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
         android:visibility="gone"
-        android:text="@string/error_getting_movies" />
+        android:text="@string/Empty" />
 
 </RelativeLayout>

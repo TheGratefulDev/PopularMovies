@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">PopularMovies</string>
-    <string name="error_getting_movies">Error Getting Movies</string>
+    <string name="Empty">Empty</string>
     <string name="menu_sort_by_popular">Popular</string>
     <string name="menu_sort_by_top_rated">Top Rated</string>
     <string name="menu_sort_by_now_playing">Now Playing</string>
@@ -15,4 +15,11 @@
     <string name="errorProblem_loading_review">Problem Loading Review</string>
     <string name="genre">Genre</string>
     <string name="add_to_my_favorite">Add to My Favorite</string>
+    <string name="remove_from_my_favorite">remove from my favorite</string>
+    <string name="Popular">Popular</string>
+    <string name="Top_Rated">Top Rated</string>
+    <string name="Now_Playing">Now Playing</string>
+    <string name="My_Favorites">My Favorites</string>
+    <string name="share_trailer">Share Trailer</string>
+    <string name="send_to">Send To</string>
 </resources>

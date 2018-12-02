@@ -1,6 +1,8 @@
 package com.notaprogrammer.popularmovies.object;
 
+import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
+import com.notaprogrammer.popularmovies.database.FavoriteEntry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +44,6 @@ public class Movie {
 
     boolean isFavorite = false;
 
-    public Movie() { }
 
     public long getId() {
         return id;
@@ -179,4 +180,13 @@ public class Movie {
     public void setFavorite(boolean favorite) {
         isFavorite = favorite;
     }
+
+    public String toJsonString(){
+        return new Gson().toJson(this);
+    }
+
+    public static Movie convertToMovie(FavoriteEntry favoriteEntry) {
+        return new Gson().fromJson(favoriteEntry.getMovieJson(), Movie.class);
+    }
+
 }

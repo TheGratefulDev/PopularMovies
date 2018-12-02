@@ -58,7 +58,7 @@ public class Video {
         return NetworkUtils.buildYoutubeThumbnailUrl(key).toString();
     }
 
-    public String getYoutubeLink(){
+    public String getYouTubeLink(){
         return NetworkUtils.buildYoutubeUrl(key).toString();
     }
 

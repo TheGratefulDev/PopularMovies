@@ -10,10 +10,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.notaprogrammer.popularmovies.R;
+import com.notaprogrammer.popularmovies.database.FavoriteEntry;
 import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import okhttp3.HttpUrl;
@@ -22,6 +24,7 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
 
     final private ItemClickListener onListItemClick;
     private List<Movie> movieList;
+    private  List<FavoriteEntry> favoriteEntries;
 
     public interface ItemClickListener {
         void onListItemClick(Movie selectedMovie);
@@ -76,12 +79,11 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
             movieImageView.setContentDescription(R.string.poster_content_description_image_prefix + movie.getTitle());
             movieTextView.setText(movie.getTitle());
 
-            if(movie.isFavorite() ){
+            if(isFavorite(movie) ){
                 favoriteIndicatorImageView.setVisibility(View.VISIBLE);
             }else{
                 favoriteIndicatorImageView.setVisibility(View.GONE);
             }
-
         }
 
         @Override
@@ -92,9 +94,50 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         }
     }
 
+    private boolean isFavorite(Movie movie) {
+
+        if(favoriteEntries == null){
+            return false;
+        }
+
+        for (FavoriteEntry favoriteEntry : favoriteEntries){
+            if(favoriteEntry.getMovieId() == movie.getId()){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public void updateList(List<Movie> newMovieList){
         this.movieList = newMovieList;
         notifyDataSetChanged();
     }
+
+
+    public void updateFavoriteList(List<FavoriteEntry> favoriteEntries, boolean showFavoriteOnly) {
+        this.favoriteEntries = favoriteEntries;
+
+        if( showFavoriteOnly ){
+            this.movieList = getMovieListFromFavorites();
+        }
+
+        notifyDataSetChanged();
+    }
+
+    public List<Movie> getMovieListFromFavorites(){
+        List<Movie> movieList = new ArrayList<>();
+        for (FavoriteEntry favoriteEntry : favoriteEntries){
+            movieList.add(Movie.convertToMovie(favoriteEntry));
+        }
+        return movieList;
+    }
+
+
+    public void clear() {
+        this.movieList.clear();
+        notifyDataSetChanged();
+    }
+
 
 }

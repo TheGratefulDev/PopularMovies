@@ -1,10 +1,13 @@
 package com.notaprogrammer.popularmovies;
 
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -21,6 +24,8 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.notaprogrammer.popularmovies.adapter.ReviewAdapter;
 import com.notaprogrammer.popularmovies.adapter.VideosAdapter;
+import com.notaprogrammer.popularmovies.database.AppDatabase;
+import com.notaprogrammer.popularmovies.database.FavoriteEntry;
 import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.object.Review;
 import com.notaprogrammer.popularmovies.object.Video;
@@ -104,7 +109,6 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
     protected RecyclerView reviewsRv;
 
     private Gson gson = new Gson();
-
     private Movie selectedMovie;
 
     private VideosAdapter videosAdapter;
@@ -112,6 +116,18 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
 
     private ReviewAdapter reviewAdapter;
     private List<Review> reviewList;
+
+    private AppDatabase appDatabase;
+
+    private FavoriteEntry favoriteEntry;
+
+    public FavoriteEntry getFavoriteEntry() {
+        return favoriteEntry;
+    }
+
+    public void setFavoriteEntry(FavoriteEntry favoriteEntry) {
+        this.favoriteEntry = favoriteEntry;
+    }
 
     public DetailActivity() {
         videoList = new ArrayList<>();
@@ -123,6 +139,8 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
         ButterKnife.bind(this);
+
+        appDatabase = AppDatabase.getInstance(this.getApplicationContext());
 
         if(savedInstanceState != null){
             if(savedInstanceState.containsKey(SAVE_INSTANCE_MOVIE)){
@@ -141,6 +159,16 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
             selectedMovie = convertJsonToMovieObject(selectedMovieJson);
         }
 
+        AddFavoriteViewModelFactory factory = new AddFavoriteViewModelFactory(appDatabase, selectedMovie.getId());
+        final AddFavoriteViewModel viewModel = ViewModelProviders.of(this, factory).get(AddFavoriteViewModel.class);
+        viewModel.getFavoriteEntryLiveData().observe(this, new Observer<FavoriteEntry>() {
+            @Override
+            public void onChanged(@Nullable FavoriteEntry favoriteEntry) {
+                setFavoriteEntry(favoriteEntry);
+                selectedMovie.setFavorite( favoriteEntry != null  );
+            }
+        });
+
         if(getSupportActionBar()!=null){
             getSupportActionBar().setTitle(selectedMovie.getTitle());
         }
@@ -152,6 +180,8 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         updateVideos();
         updateReviews();
     }
+
+
 
     private void updateReviews() {
         if(reviewsRv == null){
@@ -241,7 +271,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
             return;
         }
 
-        videosAdapter = new VideosAdapter(videoList, DetailActivity.this);
+        videosAdapter = new VideosAdapter(this, videoList, DetailActivity.this);
         videosRv.setAdapter(videosAdapter);
         videosRv.setLayoutManager( new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         videosRv.setHasFixedSize(true);
@@ -275,6 +305,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
 
                             Type listType = new TypeToken<List<Video>>(){}.getType();
                             videoList = gson.fromJson(trailersArray.toString(), listType);
+
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -323,6 +354,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         videosLabelTv .setVisibility(View.GONE);
         videosRv.setVisibility(View.GONE);
     }
+
 
     private void removeReviewsView(){
         reviewsLabelTV .setVisibility(View.GONE);
@@ -391,7 +423,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
             }
 
             if(isUnableToPlayVideoWithApp){
-                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(video.getYoutubeLink()));
+                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(video.getYouTubeLink()));
                 startActivity(webIntent);
             }
         }
@@ -408,7 +440,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putString(SAVE_INSTANCE_MOVIE, gson.toJson(selectedMovie));
+        outState.putString(SAVE_INSTANCE_MOVIE, selectedMovie.toJsonString());
     }
 
     MenuItem favoriteMenuItem;
@@ -423,7 +455,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
     }
 
     private void updateFavoriteStatus() {
-        if ( selectedMovie.isFavorite() ) {
+        if (selectedMovie.isFavorite() ) {
             favoriteMenuItem.setIcon(R.drawable.favorite_solid);
         } else {
             favoriteMenuItem.setIcon(R.drawable.favorite);
@@ -441,14 +473,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
 
             case R.id.action_add_to_my_favorite:
 
-
-                if(selectedMovie.isFavorite()){
-                    selectedMovie.setFavorite( false );
-                }else{
-                    selectedMovie.setFavorite( true );
-                }
-
-
+                performFavoriteToggleClick();
                 invalidateOptionsMenu();
                 break;
 
@@ -457,4 +482,33 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         }
         return super.onOptionsItemSelected(item);
     }
+
+    private void performFavoriteToggleClick() {
+
+        if( selectedMovie.isFavorite() ){
+
+            AppExecutors.getInstance().diskIO().execute(new Runnable() {
+                @Override
+                public void run() {
+                    appDatabase.favoriteDao().deleteTask(getFavoriteEntry());
+                }
+            });
+            selectedMovie.setFavorite( false );
+
+        }else{
+
+            final FavoriteEntry favoriteEntry = new FavoriteEntry(selectedMovie.getId(), selectedMovie.toJsonString());
+            AppExecutors.getInstance().diskIO().execute(new Runnable() {
+                @Override
+                public void run() {
+                    appDatabase.favoriteDao().insertTask(favoriteEntry);
+                }
+            });
+            selectedMovie.setFavorite( true );
+
+        }
+    }
+
+
+
 }

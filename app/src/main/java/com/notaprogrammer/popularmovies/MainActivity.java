@@ -1,8 +1,11 @@
 package com.notaprogrammer.popularmovies;
 
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
@@ -16,6 +19,8 @@ import android.widget.TextView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.notaprogrammer.popularmovies.adapter.MoviesAdapter;
+import com.notaprogrammer.popularmovies.database.AppDatabase;
+import com.notaprogrammer.popularmovies.database.FavoriteEntry;
 import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
 
@@ -41,16 +46,18 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
 
     private static final String SORT_BY_MY_FAVORITE = "my_favorite";
     private static final String SAVE_INSTANCE_MOVIE_LIST = "SAVE_INSTANCE_MOVIE_LIST";
+    private static final String SAVE_INSTANCE_ACTION_BAR_TEXT = "SAVE_INSTANCE_ACTION_BAR_TEXT";
+    private static final String SAVE_INSTANCE_CURRENT_SORT_TYPE = "SAVE_INSTANCE_CURRENT_SORT_TYPE";
     private List<Movie> currentMovieList;
     private MoviesAdapter moviesAdapter;
-    private Menu menu;
     private String selectedSortType;
     private String selectedActionBarTitle;
+
     Gson gson = new Gson();
 
     //Can not be private
     @SuppressWarnings("WeakerAccess")
-    @BindView(R.id.tv_error_message)
+    @BindView(R.id.tv_empty_message)
     protected TextView emptyViewTv;
 
     @SuppressWarnings("WeakerAccess")
@@ -60,6 +67,8 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
     @SuppressWarnings("WeakerAccess")
     @BindView(R.id.spl_movie_choices)
     protected SwipeRefreshLayout swipeRefreshLayout;
+
+    private AppDatabase appDatabase;
 
     public MainActivity() {
         currentMovieList = new ArrayList<>();
@@ -71,31 +80,59 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        appDatabase = AppDatabase.getInstance(this.getApplicationContext());
+
         moviesAdapter = new MoviesAdapter(currentMovieList, MainActivity.this);
         moviesRv.setAdapter(moviesAdapter);
         moviesRv.setLayoutManager( new GridLayoutManager(getApplicationContext(), 2) );
         moviesRv.setHasFixedSize(true);
+
+        swipeRefreshLayout.setOnRefreshListener(this);
 
         if(savedInstanceState != null){
             if(savedInstanceState.containsKey(SAVE_INSTANCE_MOVIE_LIST)){
                 currentMovieList = convertMovieListJsonToObject(savedInstanceState.getString(SAVE_INSTANCE_MOVIE_LIST));
                 moviesAdapter.updateList(currentMovieList);
             }
+
+            if(savedInstanceState.containsKey(SAVE_INSTANCE_ACTION_BAR_TEXT)){
+                selectedActionBarTitle = savedInstanceState.getString(SAVE_INSTANCE_ACTION_BAR_TEXT);
+            }
+
+            if(savedInstanceState.containsKey(SAVE_INSTANCE_CURRENT_SORT_TYPE)){
+                selectedSortType = savedInstanceState.getString(SAVE_INSTANCE_CURRENT_SORT_TYPE);
+            }
+
+            updateActionBar();
+
         }else{
-            swipeRefreshLayout.setOnRefreshListener(this);
+
             swipeRefreshLayout.post(new Runnable() {
                 @Override
                 public void run() {
                     getMoviesFromApi();
                 }
             });
+
         }
+        setupViewModel();
     }
 
+    private void setupViewModel() {
+        MainViewModel viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
+        viewModel.getFavorites().observe(this, new Observer<List<FavoriteEntry>>() {
+            @Override
+            public void onChanged(@Nullable List<FavoriteEntry> favoriteEntries) {
+
+                boolean isFavorite = selectedSortType != null && selectedSortType.equals(SORT_BY_MY_FAVORITE);
+
+                moviesAdapter.updateFavoriteList(favoriteEntries,isFavorite);
+            }
+        });
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        this.menu = menu;
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
@@ -105,55 +142,59 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         int itemThatWasClickedId = item.getItemId();
 
         switch (itemThatWasClickedId){
+
             case R.id.action_sort_by_popular:
-                refreshScreen(item, NetworkUtils.SORT_BY_POPULAR);
+                refreshScreen(NetworkUtils.SORT_BY_POPULAR, getString(R.string.Popular));
                 break;
 
             case R.id.action_sort_by_top_rated:
-                refreshScreen(item, NetworkUtils.SORT_BY_TOP_RATED);
+                refreshScreen(NetworkUtils.SORT_BY_TOP_RATED, getString(R.string.Top_Rated));
                 break;
 
             case R.id.action_sort_by_now_playing:
-                refreshScreen(item, NetworkUtils.SORT_BY_NOW_PLAYING);
+                refreshScreen( NetworkUtils.SORT_BY_NOW_PLAYING, getString(R.string.Now_Playing));
                 break;
 
             case R.id.action_sort_by_my_favorite:
-                refreshScreen(item, SORT_BY_MY_FAVORITE);
+                refreshScreen(SORT_BY_MY_FAVORITE, getString(R.string.My_Favorites));
                 break;
-
 
             default:
                 break;
+
         }
         return super.onOptionsItemSelected(item);
     }
 
-
-    private void refreshScreen(MenuItem item, String sortType){
-        setSelectedActionBarTitle(item.getTitle().toString());
+    private void refreshScreen( String sortType, String selectedActionBarTitle){
+        setSelectedActionBarTitle(selectedActionBarTitle);
         setSelectedSortType(sortType);
         onRefresh();
     }
 
-    private void displayErrorMessage() {
+    private void displayEmptyMessage() {
          emptyViewTv.setVisibility(View.VISIBLE);
     }
 
-    private void clearErrorMessage(){
+    private void clearEmptyMessage(){
         emptyViewTv.setVisibility(View.GONE);
+    }
+
+    private void updateActionBar(){
+        if(getSupportActionBar()!=null){
+            getSupportActionBar().setTitle(getSelectedActionBarTitle());
+        }
     }
 
     private void getMoviesFromApi() {
 
-        clearErrorMessage();
+        clearEmptyMessage();
 
         if(swipeRefreshLayout != null){
             swipeRefreshLayout.setRefreshing(true);
         }
 
-        if(getSupportActionBar()!=null){
-            getSupportActionBar().setTitle(getSelectedActionBarTitle());
-        }
+        updateActionBar();
 
         OkHttpClient client = new OkHttpClient();
 
@@ -168,7 +209,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        displayErrorMessage();
+                        displayEmptyMessage();
 
                         if(swipeRefreshLayout != null){
                             swipeRefreshLayout.setRefreshing(false);
@@ -183,7 +224,6 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.isSuccessful() && response.body() !=null) {
                     List<Movie> movieList = new ArrayList<>();
-
 
                     try {
                         JSONObject jsonObject = new JSONObject(response.body().string());
@@ -217,7 +257,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            displayErrorMessage();
+                            displayEmptyMessage();
 
                             if(swipeRefreshLayout != null){
                                 swipeRefreshLayout.setRefreshing(false);
@@ -241,11 +281,9 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
     }
 
     private String getSelectedActionBarTitle() {
-
         if(TextUtils.isEmpty(selectedActionBarTitle)){
-            return selectedActionBarTitle = menu.findItem(R.id.action_sort_by_popular).getTitle().toString();
+            return selectedActionBarTitle = getString(R.string.Popular);
         }
-
         return selectedActionBarTitle;
     }
 
@@ -264,56 +302,61 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         return selectedSortType;
     }
 
+    public List<Movie> getCurrentMovieList() {
+        return currentMovieList;
+    }
+
     @Override
     public void onRefresh() {
-        if(selectedSortType.equals(SORT_BY_MY_FAVORITE) ){
+
+        moviesAdapter.clear();
+
+        if(selectedSortType != null && selectedSortType.equals(SORT_BY_MY_FAVORITE) ){
             getMoviesFromDb();
         }else{
             getMoviesFromApi();
         }
     }
 
+
     private void getMoviesFromDb(){
 
-        clearErrorMessage();
+        clearEmptyMessage();
 
         if(swipeRefreshLayout != null){
             swipeRefreshLayout.setRefreshing(true);
         }
 
-        if(getSupportActionBar()!=null){
-            getSupportActionBar().setTitle(getSelectedActionBarTitle());
+        updateActionBar();
+
+        List<Movie> movieList =  moviesAdapter.getMovieListFromFavorites();
+
+        if( movieList != null && movieList.size() == 0 ){
+            displayEmptyMessage();
         }
 
-        List<Movie> favoriteMovies = new ArrayList<>();
-
-
-        if(favoriteMovies.size() == 0 ){
-            displayErrorMessage();
-        }
-
+        currentMovieList = movieList;
+        moviesAdapter.updateList(movieList);
+        //scroll back to the top if user is at the bottom of the screen after sort changes
+        moviesRv.smoothScrollToPosition(0);
         if(swipeRefreshLayout != null){
             swipeRefreshLayout.setRefreshing(false);
         }
 
-        moviesAdapter.updateList(favoriteMovies);
-        //scroll back to the top if user is at the bottom of the screen after sort changes
         moviesRv.smoothScrollToPosition(0);
-    }
-
-    public List<Movie> getCurrentMovieList() {
-        return currentMovieList;
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(SAVE_INSTANCE_MOVIE_LIST , gson.toJson(getCurrentMovieList()));
+        outState.putString(SAVE_INSTANCE_ACTION_BAR_TEXT , getSelectedActionBarTitle());
+        outState.putString(SAVE_INSTANCE_CURRENT_SORT_TYPE , getSelectedSortType());
     }
-
 
     private List<Movie> convertMovieListJsonToObject(String jsonString) {
         Type listType = new TypeToken<List<Movie>>(){}.getType();
         return gson.fromJson(jsonString, listType);
     }
+
 }
