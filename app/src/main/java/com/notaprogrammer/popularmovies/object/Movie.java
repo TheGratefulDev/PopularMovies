@@ -40,6 +40,8 @@ public class Movie {
 
     List<Video> videoList = new ArrayList<>();
 
+    boolean isFavorite = false;
+
     public Movie() { }
 
     public long getId() {
@@ -168,5 +170,13 @@ public class Movie {
 
     public void setVideoList(List<Video> videoList) {
         this.videoList = videoList;
+    }
+
+    public boolean isFavorite() {
+        return isFavorite;
+    }
+
+    public void setFavorite(boolean favorite) {
+        isFavorite = favorite;
     }
 }

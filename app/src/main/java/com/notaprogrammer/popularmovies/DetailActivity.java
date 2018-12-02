@@ -9,6 +9,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
@@ -373,21 +375,6 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         return gson.fromJson(movieJson, Movie.class);
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-            case android.R.id.home:
-
-                //Up Button return to movie list, however, it does not keep the scroll state of the
-                //recycler view. make the up button act like the back button
-
-                onBackPressed();
-                return true;
-        }
-
-        return(super.onOptionsItemSelected(item));
-    }
 
     @Override
     public void onListItemClick(Video video) {
@@ -424,4 +411,50 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         outState.putString(SAVE_INSTANCE_MOVIE, gson.toJson(selectedMovie));
     }
 
+    MenuItem favoriteMenuItem;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.detail, menu);
+        favoriteMenuItem = menu.findItem(R.id.action_add_to_my_favorite);
+        updateFavoriteStatus();
+        return true;
+    }
+
+    private void updateFavoriteStatus() {
+        if ( selectedMovie.isFavorite() ) {
+            favoriteMenuItem.setIcon(R.drawable.favorite_solid);
+        } else {
+            favoriteMenuItem.setIcon(R.drawable.favorite);
+        }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int itemThatWasClickedId = item.getItemId();
+
+        switch (itemThatWasClickedId){
+            case android.R.id.home:
+                onBackPressed();
+                return true;
+
+            case R.id.action_add_to_my_favorite:
+
+
+                if(selectedMovie.isFavorite()){
+                    selectedMovie.setFavorite( false );
+                }else{
+                    selectedMovie.setFavorite( true );
+                }
+
+
+                invalidateOptionsMenu();
+                break;
+
+            default:
+                break;
+        }
+        return super.onOptionsItemSelected(item);
+    }
 }
