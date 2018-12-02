@@ -181,8 +181,6 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         updateReviews();
     }
 
-
-
     private void updateReviews() {
         if(reviewsRv == null){
             return;
@@ -484,7 +482,6 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
     }
 
     private void performFavoriteToggleClick() {
-
         if( selectedMovie.isFavorite() ){
 
             AppExecutors.getInstance().diskIO().execute(new Runnable() {
@@ -508,7 +505,5 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
 
         }
     }
-
-
 
 }

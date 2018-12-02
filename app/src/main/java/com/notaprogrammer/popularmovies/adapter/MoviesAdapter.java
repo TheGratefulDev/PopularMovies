@@ -95,7 +95,6 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
     }
 
     private boolean isFavorite(Movie movie) {
-
         if(favoriteEntries == null){
             return false;
         }
@@ -113,7 +112,6 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         this.movieList = newMovieList;
         notifyDataSetChanged();
     }
-
 
     public void updateFavoriteList(List<FavoriteEntry> favoriteEntries, boolean showFavoriteOnly) {
         this.favoriteEntries = favoriteEntries;
@@ -133,11 +131,9 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
         return movieList;
     }
 
-
     public void clear() {
         this.movieList.clear();
         notifyDataSetChanged();
     }
-
 
 }

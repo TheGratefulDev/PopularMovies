@@ -19,7 +19,6 @@ import android.widget.TextView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.notaprogrammer.popularmovies.adapter.MoviesAdapter;
-import com.notaprogrammer.popularmovies.database.AppDatabase;
 import com.notaprogrammer.popularmovies.database.FavoriteEntry;
 import com.notaprogrammer.popularmovies.object.Movie;
 import com.notaprogrammer.popularmovies.utilities.NetworkUtils;
@@ -68,8 +67,6 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
     @BindView(R.id.spl_movie_choices)
     protected SwipeRefreshLayout swipeRefreshLayout;
 
-    private AppDatabase appDatabase;
-
     public MainActivity() {
         currentMovieList = new ArrayList<>();
     }
@@ -79,8 +76,6 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-
-        appDatabase = AppDatabase.getInstance(this.getApplicationContext());
 
         moviesAdapter = new MoviesAdapter(currentMovieList, MainActivity.this);
         moviesRv.setAdapter(moviesAdapter);

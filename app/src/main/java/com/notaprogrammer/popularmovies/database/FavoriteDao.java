@@ -22,5 +22,4 @@ public interface FavoriteDao {
 
     @Query("SELECT * FROM favorite WHERE movieId = :movieId")
     LiveData<FavoriteEntry> loadFavoriteByMovieId(long movieId);
-
 }
