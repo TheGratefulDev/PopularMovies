@@ -49,6 +49,7 @@ import static com.notaprogrammer.popularmovies.object.Video.SITE_YOUTUBE;
 public class DetailActivity extends AppCompatActivity implements VideosAdapter.ItemClickListener, ReviewAdapter.ReviewItemClickListener {
 
     public static final String SELECTED_MOVIE = "SELECTED_MOVIE";
+    private static final String SAVE_INSTANCE_MOVIE = "SAVE_INSTANCE_MOVIE";
 
     //Can not be private
     @SuppressWarnings("WeakerAccess")
@@ -100,6 +101,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
     @BindView(R.id.rv_reviews)
     protected RecyclerView reviewsRv;
 
+    private Gson gson = new Gson();
 
     private Movie selectedMovie;
 
@@ -120,19 +122,25 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         setContentView(R.layout.activity_detail);
         ButterKnife.bind(this);
 
-        Intent intent = getIntent();
+        if(savedInstanceState != null){
+            if(savedInstanceState.containsKey(SAVE_INSTANCE_MOVIE)){
+                selectedMovie = convertJsonToMovieObject(savedInstanceState.getString(SAVE_INSTANCE_MOVIE));
+            }
+        }else{
+            Intent intent = getIntent();
 
-        if(!intent.hasExtra(SELECTED_MOVIE)){
-            Toast.makeText(this, R.string.error_problem_loading_detail, Toast.LENGTH_SHORT).show();
-            finish();
-            return;
+            if(!intent.hasExtra(SELECTED_MOVIE)){
+                Toast.makeText(this, R.string.error_problem_loading_detail, Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+
+            String selectedMovieJson = intent.getStringExtra(SELECTED_MOVIE);
+            selectedMovie = convertJsonToMovieObject(selectedMovieJson);
         }
 
-        String selectedMovieJson = intent.getStringExtra(SELECTED_MOVIE);
-        selectedMovie = convertJsonToMovieObject(selectedMovieJson);
-
         if(getSupportActionBar()!=null){
-            getSupportActionBar().setTitle(selectedMovie.getOriginalTitle());
+            getSupportActionBar().setTitle(selectedMovie.getTitle());
         }
 
         updateReleaseDate();
@@ -153,60 +161,13 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         reviewsRv.setLayoutManager( new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
         reviewsRv.setHasFixedSize(true);
 
-        OkHttpClient client = new OkHttpClient();
-        HttpUrl url = NetworkUtils.buildReviewsUrl(selectedMovie.getId());
-        Request request = new Request.Builder().url(url).build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        removeReviewsView();
-                    }
-                });
-
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful() && response.body() !=null) {
-
-                    List<Review> reviewList = null;
-                    Gson gson = new Gson();
-
-                    try {
-                        JSONObject jsonObject = new JSONObject(response.body().string());
-                        JSONArray reviewArray = jsonObject.getJSONArray(NetworkUtils.RESULT_KEY_RESULTS);
-
-                        Type listType = new TypeToken<List<Review>>(){}.getType();
-                        reviewList = gson.fromJson(reviewArray.toString(), listType);
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-
-                    if(reviewList == null || reviewList.size() == 0){
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                removeReviewsView();
-                            }
-                        });
-                        return;
-                    }
-
-                    final List<Review> finalReviewList = reviewList;
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            reviewAdapter.updateList(finalReviewList);
-                        }
-                    });
-
-                } else {
+        if(selectedMovie.getReviewList().size() == 0) {
+            OkHttpClient client = new OkHttpClient();
+            HttpUrl url = NetworkUtils.buildReviewsUrl(selectedMovie.getId());
+            Request request = new Request.Builder().url(url).build();
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
 
                     runOnUiThread(new Runnable() {
                         @Override
@@ -216,8 +177,61 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
                     });
 
                 }
-            }
-        });
+
+                @Override
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    if (response.isSuccessful() && response.body() !=null) {
+
+                        List<Review> reviewList = null;
+
+
+                        try {
+                            JSONObject jsonObject = new JSONObject(response.body().string());
+                            JSONArray reviewArray = jsonObject.getJSONArray(NetworkUtils.RESULT_KEY_RESULTS);
+
+                            Type listType = new TypeToken<List<Review>>(){}.getType();
+                            reviewList = gson.fromJson(reviewArray.toString(), listType);
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if(reviewList == null || reviewList.size() == 0){
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    removeReviewsView();
+                                }
+                            });
+                            return;
+                        }
+
+                        final List<Review> finalReviewList = reviewList;
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                reviewAdapter.updateList(finalReviewList);
+                                selectedMovie.setReviewList(finalReviewList);
+                            }
+                        });
+
+                    } else {
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                removeReviewsView();
+                            }
+                        });
+
+                    }
+                }
+            });
+        }else {
+            reviewAdapter.updateList(selectedMovie.getReviewList());
+        }
+
     }
 
     private void updateVideos() {
@@ -230,61 +244,13 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
         videosRv.setLayoutManager( new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         videosRv.setHasFixedSize(true);
 
-        OkHttpClient client = new OkHttpClient();
-        HttpUrl url = NetworkUtils.buildVideosUrl(selectedMovie.getId());
-        Request request = new Request.Builder().url(url).build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        removeVideosView();
-                    }
-                });
-
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful() && response.body() !=null) {
-
-                    List<Video> videoList = null;
-                    Gson gson = new Gson();
-
-                    try {
-                        JSONObject jsonObject = new JSONObject(response.body().string());
-                        JSONArray trailersArray = jsonObject.getJSONArray(NetworkUtils.RESULT_KEY_RESULTS);
-
-                        Type listType = new TypeToken<List<Video>>(){}.getType();
-                        videoList = gson.fromJson(trailersArray.toString(), listType);
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-
-                    if(videoList == null || videoList.size() == 0 ){
-
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                removeVideosView();
-                            }
-                        });
-                        return;
-                    }
-
-                    final List<Video> finalVideoList = videoList;
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            videosAdapter.updateList(finalVideoList);
-                        }
-                    });
-
-                } else {
+        if(selectedMovie.getVideoList().size() == 0 ){
+            OkHttpClient client = new OkHttpClient();
+            HttpUrl url = NetworkUtils.buildVideosUrl(selectedMovie.getId());
+            Request request = new Request.Builder().url(url).build();
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
 
                     runOnUiThread(new Runnable() {
                         @Override
@@ -294,8 +260,61 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
                     });
 
                 }
-            }
-        });
+
+                @Override
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    if (response.isSuccessful() && response.body() !=null) {
+
+                        List<Video> videoList = null;
+
+                        try {
+                            JSONObject jsonObject = new JSONObject(response.body().string());
+                            JSONArray trailersArray = jsonObject.getJSONArray(NetworkUtils.RESULT_KEY_RESULTS);
+
+                            Type listType = new TypeToken<List<Video>>(){}.getType();
+                            videoList = gson.fromJson(trailersArray.toString(), listType);
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        if(videoList == null || videoList.size() == 0 ){
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    removeVideosView();
+                                }
+                            });
+                            return;
+                        }
+
+                        final List<Video> finalVideoList = videoList;
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                videosAdapter.updateList(finalVideoList);
+                                selectedMovie.setVideoList(finalVideoList);
+                            }
+                        });
+
+                    } else {
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                removeVideosView();
+                            }
+                        });
+
+                    }
+                }
+            });
+        }else{
+            videosAdapter.updateList(selectedMovie.getVideoList());
+        }
+
     }
 
     private void removeVideosView(){
@@ -351,7 +370,7 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
 
 
     private Movie convertJsonToMovieObject(String movieJson){
-        return new Gson().fromJson(movieJson, Movie.class);
+        return gson.fromJson(movieJson, Movie.class);
     }
 
     @Override
@@ -395,7 +414,14 @@ public class DetailActivity extends AppCompatActivity implements VideosAdapter.I
     @Override
     public void onListItemClick(Review selectedReview) {
         Intent intent = new Intent(this, ReviewActivity.class);
-        intent.putExtra(ReviewActivity.SELECTED_REVIEW, new Gson().toJson(selectedReview));
+        intent.putExtra(ReviewActivity.SELECTED_REVIEW, gson.toJson(selectedReview));
         startActivity(intent);
     }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(SAVE_INSTANCE_MOVIE, gson.toJson(selectedMovie));
+    }
+
 }

@@ -20,4 +20,10 @@
         app:showAsAction="never"
         android:title="@string/menu_sort_by_now_playing"/>
 
+    <item
+        android:id="@+id/action_sort_by_my_favorite"
+        android:orderInCategory="4"
+        app:showAsAction="never"
+        android:title="@string/menu_sort_by_my_favorite"/>
+
 </menu>

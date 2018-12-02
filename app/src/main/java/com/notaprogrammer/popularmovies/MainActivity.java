@@ -39,11 +39,14 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity implements MoviesAdapter.ItemClickListener, SwipeRefreshLayout.OnRefreshListener {
 
-    private final List<Movie> movieList;
+    private static final String SORT_BY_MY_FAVORITE = "my_favorite";
+    private static final String SAVE_INSTANCE_MOVIE_LIST = "SAVE_INSTANCE_MOVIE_LIST";
+    private List<Movie> currentMovieList;
     private MoviesAdapter moviesAdapter;
     private Menu menu;
     private String selectedSortType;
     private String selectedActionBarTitle;
+    Gson gson = new Gson();
 
     //Can not be private
     @SuppressWarnings("WeakerAccess")
@@ -59,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
     protected SwipeRefreshLayout swipeRefreshLayout;
 
     public MainActivity() {
-        movieList = new ArrayList<>();
+        currentMovieList = new ArrayList<>();
     }
 
     @Override
@@ -68,19 +71,27 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        moviesAdapter = new MoviesAdapter(movieList, MainActivity.this);
+        moviesAdapter = new MoviesAdapter(currentMovieList, MainActivity.this);
         moviesRv.setAdapter(moviesAdapter);
         moviesRv.setLayoutManager( new GridLayoutManager(getApplicationContext(), 2) );
         moviesRv.setHasFixedSize(true);
 
-        swipeRefreshLayout.setOnRefreshListener(this);
-        swipeRefreshLayout.post(new Runnable() {
-            @Override
-            public void run() {
-                getMoviesFromApi();
+        if(savedInstanceState != null){
+            if(savedInstanceState.containsKey(SAVE_INSTANCE_MOVIE_LIST)){
+                currentMovieList = convertMovieListJsonToObject(savedInstanceState.getString(SAVE_INSTANCE_MOVIE_LIST));
+                moviesAdapter.updateList(currentMovieList);
             }
-        });
+        }else{
+            swipeRefreshLayout.setOnRefreshListener(this);
+            swipeRefreshLayout.post(new Runnable() {
+                @Override
+                public void run() {
+                    getMoviesFromApi();
+                }
+            });
+        }
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -106,11 +117,17 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                 refreshScreen(item, NetworkUtils.SORT_BY_NOW_PLAYING);
                 break;
 
+            case R.id.action_sort_by_my_favorite:
+                refreshScreen(item, SORT_BY_MY_FAVORITE);
+                break;
+
+
             default:
                 break;
         }
         return super.onOptionsItemSelected(item);
     }
+
 
     private void refreshScreen(MenuItem item, String sortType){
         setSelectedActionBarTitle(item.getTitle().toString());
@@ -122,7 +139,13 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
          emptyViewTv.setVisibility(View.VISIBLE);
     }
 
+    private void clearErrorMessage(){
+        emptyViewTv.setVisibility(View.GONE);
+    }
+
     private void getMoviesFromApi() {
+
+        clearErrorMessage();
 
         if(swipeRefreshLayout != null){
             swipeRefreshLayout.setRefreshing(true);
@@ -160,7 +183,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.isSuccessful() && response.body() !=null) {
                     List<Movie> movieList = new ArrayList<>();
-                    Gson gson = new Gson();
+
 
                     try {
                         JSONObject jsonObject = new JSONObject(response.body().string());
@@ -178,6 +201,7 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            currentMovieList = finalMovieList;
                             moviesAdapter.updateList(finalMovieList);
                             //scroll back to the top if user is at the bottom of the screen after sort changes
                             moviesRv.smoothScrollToPosition(0);
@@ -242,6 +266,54 @@ public class MainActivity extends AppCompatActivity implements MoviesAdapter.Ite
 
     @Override
     public void onRefresh() {
-        getMoviesFromApi();
+        if(selectedSortType.equals(SORT_BY_MY_FAVORITE) ){
+            getMoviesFromDb();
+        }else{
+            getMoviesFromApi();
+        }
+    }
+
+    private void getMoviesFromDb(){
+
+        clearErrorMessage();
+
+        if(swipeRefreshLayout != null){
+            swipeRefreshLayout.setRefreshing(true);
+        }
+
+        if(getSupportActionBar()!=null){
+            getSupportActionBar().setTitle(getSelectedActionBarTitle());
+        }
+
+        List<Movie> favoriteMovies = new ArrayList<>();
+
+
+        if(favoriteMovies.size() == 0 ){
+            displayErrorMessage();
+        }
+
+        if(swipeRefreshLayout != null){
+            swipeRefreshLayout.setRefreshing(false);
+        }
+
+        moviesAdapter.updateList(favoriteMovies);
+        //scroll back to the top if user is at the bottom of the screen after sort changes
+        moviesRv.smoothScrollToPosition(0);
+    }
+
+    public List<Movie> getCurrentMovieList() {
+        return currentMovieList;
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(SAVE_INSTANCE_MOVIE_LIST , gson.toJson(getCurrentMovieList()));
+    }
+
+
+    private List<Movie> convertMovieListJsonToObject(String jsonString) {
+        Type listType = new TypeToken<List<Movie>>(){}.getType();
+        return gson.fromJson(jsonString, listType);
     }
 }

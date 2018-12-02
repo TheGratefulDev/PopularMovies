@@ -29,9 +29,7 @@ public class ReviewActivity extends AppCompatActivity {
     @BindView(R.id.tv_author)
     protected TextView authorTextView;
 
-    String reviewState;
     Gson gson = new Gson();
-
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -44,8 +42,6 @@ public class ReviewActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_review);
         ButterKnife.bind(this);
-
-
 
         if(savedInstanceState != null){
             if(savedInstanceState.containsKey(SAVE_INSTANCE_REVIEW)){

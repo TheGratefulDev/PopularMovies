@@ -2,6 +2,9 @@ package com.notaprogrammer.popularmovies.object;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @SuppressWarnings("unused")
 public class Movie {
 
@@ -33,6 +36,9 @@ public class Movie {
 
     @SerializedName("genre_ids") int genreIds[];
 
+    List<Review> reviewList = new ArrayList<>();
+
+    List<Video> videoList = new ArrayList<>();
 
     public Movie() { }
 
@@ -148,4 +154,19 @@ public class Movie {
         return title;
     }
 
+    public List<Review> getReviewList() {
+        return reviewList;
+    }
+
+    public void setReviewList(List<Review> reviewList) {
+        this.reviewList = reviewList;
+    }
+
+    public List<Video> getVideoList() {
+        return videoList;
+    }
+
+    public void setVideoList(List<Video> videoList) {
+        this.videoList = videoList;
+    }
 }
